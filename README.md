@@ -5,6 +5,37 @@
 
 ---
 
+## 🚀 快速开始
+
+### 使用 Docker（推荐）
+
+```bash
+docker run -d \
+  --name mylist \
+  -p 5244:5244 \
+  -v /path/to/data:/opt/mylist/data \
+  ghcr.io/surenkid/mylist:latest
+```
+
+访问 `http://localhost:5244` 进行初始配置。
+
+### 使用二进制文件
+
+1. 从 [Releases](https://github.com/surenkid/mylist/releases) 下载对应平台的二进制文件
+2. 运行：
+
+```bash
+# Linux/macOS
+./mylist-linux-amd64 server
+
+# Windows
+mylist-windows-amd64.exe server
+```
+
+首次运行会自动生成配置文件，访问 `http://localhost:5244` 进行初始配置。
+
+---
+
 ## 📌 版权与许可（License）
 
 本项目是 AList 的派生版本，原始版权与许可证如下：
