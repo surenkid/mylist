@@ -14,7 +14,7 @@ RUN apk update && \
 
 COPY /build/${TARGETPLATFORM}/mylist ./
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh && /entrypoint.sh version
+RUN chmod +x /entrypoint.sh
 
 ENV PUID=0 PGID=0 UMASK=022
 VOLUME /opt/mylist/data/
