@@ -54,6 +54,24 @@ jobs:
         with:
           go-version: '1.22'
 
+      - name: Install cross-compilation toolchain
+        shell: bash
+        run: |
+          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
+            echo "安装 ARM64 交叉编译工具链"
+            sudo apt-get update
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          elif [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "386" ]; then
+            echo "安装 i386 交叉编译工具链"
+            sudo apt-get update
+            sudo apt-get install -y gcc-i686-linux-gnu
+          elif [ "${{ matrix.goos }}" = "windows" ]; then
+            echo "安装 Windows 交叉编译工具链"
+            sudo apt-get update
+            sudo apt-get install -y gcc-mingw-w64-x86-64
+          fi
+        if: matrix.os == 'ubuntu-latest'
+
       - name: Fetch frontend
         shell: bash
         run: |

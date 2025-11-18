@@ -62,18 +62,70 @@ BuildPlatform() {
   local arch=$2
   local output_name=$3
   local cgo_enabled=${4:-1}
-  local cc=${5:-gcc}
+  local cc=${5:-}
   
-  echo "building for $os-$arch"
+  # 检测是否是交叉编译
+  local current_os=$(go env GOOS 2>/dev/null || echo "")
+  local current_arch=$(go env GOARCH 2>/dev/null || echo "")
+  local is_cross_compile=false
+  
+  if [ "$os" != "$current_os" ] || [ "$arch" != "$current_arch" ]; then
+    is_cross_compile=true
+  fi
+  
+  # 如果是交叉编译，尝试使用交叉编译工具链
+  if [ "$is_cross_compile" = "true" ] && [ "$cgo_enabled" = "1" ]; then
+    # 根据目标平台选择交叉编译器
+    if [ "$os" = "linux" ] && [ "$arch" = "arm64" ]; then
+      # 尝试使用 aarch64-linux-gnu-gcc（Ubuntu/Debian 标准包）
+      if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
+        cc="aarch64-linux-gnu-gcc"
+        echo "检测到交叉编译 ($current_os/$current_arch -> $os/$arch)，使用交叉编译器: $cc"
+      else
+        echo "警告: 未找到 aarch64-linux-gnu-gcc，禁用 CGO"
+        cgo_enabled=0
+      fi
+    elif [ "$os" = "linux" ] && [ "$arch" = "386" ]; then
+      if command -v i686-linux-gnu-gcc >/dev/null 2>&1; then
+        cc="i686-linux-gnu-gcc"
+        echo "检测到交叉编译 ($current_os/$current_arch -> $os/$arch)，使用交叉编译器: $cc"
+      else
+        echo "警告: 未找到 i686-linux-gnu-gcc，禁用 CGO"
+        cgo_enabled=0
+      fi
+    elif [ "$os" = "windows" ] && [ "$arch" = "amd64" ]; then
+      if command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+        cc="x86_64-w64-mingw32-gcc"
+        echo "检测到交叉编译 ($current_os/$current_arch -> $os/$arch)，使用交叉编译器: $cc"
+      else
+        echo "警告: 未找到 x86_64-w64-mingw32-gcc，禁用 CGO"
+        cgo_enabled=0
+      fi
+    else
+      echo "警告: 未配置的交叉编译目标 ($os/$arch)，禁用 CGO"
+      cgo_enabled=0
+    fi
+  fi
+  
+  # 如果没有指定编译器，使用默认值
+  if [ -z "$cc" ] && [ "$cgo_enabled" = "1" ]; then
+    cc="gcc"
+  fi
+  
+  echo "building for $os-$arch (CGO_ENABLED=$cgo_enabled${cc:+, CC=$cc})"
   export GOOS=$os
   export GOARCH=$arch
   export CGO_ENABLED=$cgo_enabled
+  
   if [ "$cgo_enabled" = "1" ] && [ -n "$cc" ]; then
     export CC=$cc
+  else
+    unset CC
+    unset CXX
   fi
   
   local build_flags="$ldflags"
-  if [ "$os" = "linux" ] && [ -n "$cc" ]; then
+  if [ "$os" = "linux" ] && [ "$cgo_enabled" = "1" ] && [ -n "$cc" ]; then
     build_flags="--extldflags '-static -fpic' $ldflags"
   fi
   
