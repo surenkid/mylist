@@ -68,6 +68,7 @@ jobs:
 
       - name: Get version
         id: version
+        shell: bash
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
@@ -111,6 +112,7 @@ jobs:
 
       - name: Get version
         id: version
+        shell: bash
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
