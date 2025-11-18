@@ -4,15 +4,18 @@ goVersion=$(go version | sed 's/go version //')
 gitAuthor=$(git log --pretty=format:"%an <%ae>" -1 2>/dev/null || echo "unknown")
 gitCommit=$(git log --pretty=format:"%h" -1 2>/dev/null || echo "unknown")
 
+# 前端固定版本
+WEB_FIXED_VERSION="3.39.2"
+
 # 支持通过环境变量指定版本（适合 CI）
 # 这些变量可以在 GitHub Actions 中设置
 
 if [ "$1" = "dev" ]; then
   version="${VERSION:-dev}"
-  webVersion="${WEB_VERSION:-dev}"
+  webVersion="${WEB_VERSION:-$WEB_FIXED_VERSION}"
 else
   version="${VERSION:-$(git describe --abbrev=0 --tags 2>/dev/null || echo "dev")}"
-  webVersion="${WEB_VERSION:-local}"
+  webVersion="${WEB_VERSION:-$WEB_FIXED_VERSION}"
 fi
 
 echo "backend version: $version"
@@ -28,11 +31,26 @@ ldflags="\
 -X 'github.com/alist-org/alist/v3/internal/conf.WebVersion=$webVersion' \
 "
 
-# 检查前端资源是否存在
+# 下载前端资源（固定版本）
+FetchWeb() {
+  echo "下载前端资源版本: $WEB_FIXED_VERSION"
+  curl -L "https://github.com/AlistGo/alist-web/releases/download/$WEB_FIXED_VERSION/dist.tar.gz" -o dist.tar.gz
+  if [ $? -ne 0 ]; then
+    echo "错误: 下载前端资源失败"
+    exit 1
+  fi
+  tar -zxvf dist.tar.gz
+  rm -rf public/dist
+  mv -f dist public
+  rm -rf dist.tar.gz
+  echo "前端资源已下载并放置到 public/dist"
+}
+
+# 检查前端资源是否存在，如果不存在则下载
 CheckWebDist() {
   if [ ! -d "public/dist" ] || [ -z "$(ls -A public/dist 2>/dev/null)" ]; then
-    echo "警告: public/dist 目录不存在或为空，请确保前端资源已准备好"
-    echo "如果需要前端资源，请手动放置到 public/dist 目录"
+    echo "前端资源不存在，开始下载..."
+    FetchWeb
   else
     echo "前端资源已存在: public/dist"
   fi

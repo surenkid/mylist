@@ -54,26 +54,17 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Checkout frontend (if needed)
-        # 如果前端资源在单独的仓库，可以在这里 checkout
-        # 或者如果前端资源已经包含在仓库中，可以跳过此步骤
-        if: false
+      - name: Fetch frontend
+        shell: bash
         run: |
-          # 示例：从其他仓库获取前端资源
-          # git clone --depth=1 https://github.com/your-org/mylist-web.git temp-web
-          # cp -r temp-web/dist public/
-          # rm -rf temp-web
-          echo "前端资源应该已经在 public/dist 目录中"
-
-      - name: Verify frontend exists
-        run: |
-          if [ ! -d "public/dist" ] || [ -z "$(ls -A public/dist 2>/dev/null)" ]; then
-            echo "警告: public/dist 目录不存在或为空"
-            echo "请确保前端资源已准备好"
-            exit 1
-          else
-            echo "前端资源已存在"
-          fi
+          WEB_VERSION="3.39.2"
+          echo "下载前端资源版本: $WEB_VERSION"
+          curl -L "https://github.com/AlistGo/alist-web/releases/download/$WEB_VERSION/dist.tar.gz" -o dist.tar.gz
+          tar -zxvf dist.tar.gz
+          rm -rf public/dist
+          mv -f dist public
+          rm -rf dist.tar.gz
+          echo "前端资源已下载并放置到 public/dist"
 
       - name: Get version
         id: version
@@ -91,7 +82,7 @@ jobs:
       - name: Build
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          WEB_VERSION: ${{ inputs.web_version || 'local' }}
+          WEB_VERSION: ${{ inputs.web_version || '3.39.2' }}
         shell: bash
         run: |
           chmod +x build.sh || true
