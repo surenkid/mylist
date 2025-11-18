@@ -64,6 +64,13 @@ BuildPlatform() {
   local cgo_enabled=${4:-1}
   local cc=${5:-}
   
+  # 验证参数
+  if [ -z "$output_name" ]; then
+    echo "错误: output_name 为空"
+    echo "参数: os=$os, arch=$arch, output_name=$output_name"
+    exit 1
+  fi
+  
   # 检测是否是交叉编译
   local current_os=$(go env GOOS 2>/dev/null || echo "")
   local current_arch=$(go env GOARCH 2>/dev/null || echo "")
@@ -130,12 +137,17 @@ BuildPlatform() {
   fi
   
   mkdir -p "dist"
-  if go build -o ./dist/$output_name -ldflags="$build_flags" -tags=jsoniter .; then
-    if [ -f "./dist/$output_name" ]; then
-      echo "构建成功: ./dist/$output_name"
-      ls -lh "./dist/$output_name"
+  local output_path="./dist/$output_name"
+  echo "开始构建，输出路径: $output_path"
+  
+  if go build -o "$output_path" -ldflags="$build_flags" -tags=jsoniter .; then
+    if [ -f "$output_path" ]; then
+      echo "构建成功: $output_path"
+      ls -lh "$output_path"
     else
-      echo "错误: 构建完成但文件不存在: ./dist/$output_name"
+      echo "错误: 构建完成但文件不存在: $output_path"
+      echo "检查 dist 目录内容:"
+      ls -lah dist/ || echo "dist 目录不存在"
       exit 1
     fi
   else
@@ -174,7 +186,7 @@ if [ "$1" = "dev" ]; then
     BuildDocker
   elif [ -n "$2" ] && [ -n "$3" ]; then
     # 支持指定平台: ./build.sh dev linux amd64
-    local output_name="$appName-$2-$3"
+    output_name="$appName-$2-$3"
     if [ "$2" = "windows" ]; then
       output_name="$output_name.exe"
     fi
@@ -188,10 +200,11 @@ elif [ "$1" = "release" ]; then
     BuildDocker
   elif [ -n "$2" ] && [ -n "$3" ]; then
     # 支持指定平台: ./build.sh release linux amd64
-    local output_name="$appName-$2-$3"
+    output_name="$appName-$2-$3"
     if [ "$2" = "windows" ]; then
       output_name="$output_name.exe"
     fi
+    echo "准备构建: 平台=$2, 架构=$3, 输出文件=$output_name"
     BuildPlatform "$2" "$3" "$output_name"
   else
     BuildLocal
