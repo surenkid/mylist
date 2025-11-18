@@ -130,7 +130,18 @@ BuildPlatform() {
   fi
   
   mkdir -p "dist"
-  go build -o ./dist/$output_name -ldflags="$build_flags" -tags=jsoniter .
+  if go build -o ./dist/$output_name -ldflags="$build_flags" -tags=jsoniter .; then
+    if [ -f "./dist/$output_name" ]; then
+      echo "构建成功: ./dist/$output_name"
+      ls -lh "./dist/$output_name"
+    else
+      echo "错误: 构建完成但文件不存在: ./dist/$output_name"
+      exit 1
+    fi
+  else
+    echo "错误: 构建失败"
+    exit 1
+  fi
 }
 
 # 构建当前平台（使用系统自带的工具链）

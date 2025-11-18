@@ -107,11 +107,19 @@ jobs:
           chmod +x build.sh || true
           bash build.sh release ${{ matrix.goos }} ${{ matrix.goarch }}
 
+      - name: List build artifacts
+        shell: bash
+        run: |
+          echo "检查构建产物..."
+          ls -lah dist/ || echo "dist 目录不存在"
+          find dist -type f -name "*" || echo "未找到任何文件"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.output }}
           path: dist/${{ matrix.output }}
+          if-no-files-found: warn
           retention-days: 30
 
   release:
