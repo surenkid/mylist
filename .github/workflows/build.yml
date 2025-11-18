@@ -123,6 +123,7 @@ jobs:
           retention-days: 30
 
   docker:
+    needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -142,17 +143,48 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fetch frontend
+      - name: Download Linux binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: build-binaries
+          pattern: mylist-linux-*
+
+      - name: Prepare build directory
         shell: bash
         run: |
-          WEB_VERSION="3.39.2"
-          echo "下载前端资源版本: $WEB_VERSION"
-          curl -L "https://github.com/AlistGo/alist-web/releases/download/$WEB_VERSION/dist.tar.gz" -o dist.tar.gz
-          tar -zxvf dist.tar.gz
-          rm -rf public/dist
-          mv -f dist public
-          rm -rf dist.tar.gz
-          echo "前端资源已下载并放置到 public/dist"
+          mkdir -p build/linux/amd64 build/linux/arm64
+          echo "检查下载的 artifacts..."
+          find build-binaries -type f || echo "未找到文件"
+          ls -lah build-binaries/ || echo "build-binaries 目录不存在"
+          
+          # 复制 amd64 二进制文件
+          # GitHub Actions 下载 artifact 后，文件可能在 artifact 名称目录下，也可能直接在根目录
+          if [ -f "build-binaries/mylist-linux-amd64/mylist-linux-amd64" ]; then
+            cp build-binaries/mylist-linux-amd64/mylist-linux-amd64 build/linux/amd64/mylist
+          elif [ -f "build-binaries/mylist-linux-amd64" ]; then
+            cp build-binaries/mylist-linux-amd64 build/linux/amd64/mylist
+          else
+            echo "错误: 未找到 amd64 二进制文件"
+            exit 1
+          fi
+          chmod +x build/linux/amd64/mylist
+          echo "✓ 已准备 amd64 二进制文件"
+          
+          # 复制 arm64 二进制文件
+          if [ -f "build-binaries/mylist-linux-arm64/mylist-linux-arm64" ]; then
+            cp build-binaries/mylist-linux-arm64/mylist-linux-arm64 build/linux/arm64/mylist
+          elif [ -f "build-binaries/mylist-linux-arm64" ]; then
+            cp build-binaries/mylist-linux-arm64 build/linux/arm64/mylist
+          else
+            echo "错误: 未找到 arm64 二进制文件"
+            exit 1
+          fi
+          chmod +x build/linux/arm64/mylist
+          echo "✓ 已准备 arm64 二进制文件"
+          
+          # 显示构建目录结构
+          echo "构建目录结构:"
+          find build -type f -exec ls -lh {} \;
 
       - name: Get version
         id: version
@@ -160,13 +192,12 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "image_tag=$VERSION" >> $GITHUB_OUTPUT
-          echo "image_tag_latest=latest" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile.ci
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
