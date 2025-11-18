@@ -41,8 +41,7 @@ mylist-windows-amd64.exe server
 本项目是 AList 的派生版本，原始版权与许可证如下：
 
 - 原项目地址：<https://github.com/AlistGo/alist>
-- 原项目许可证：**GNU Affero General Public License v3.0 (AGPL-3.0)**  
-- 原作者版权声明及 LICENSE 文件已在本仓库中保留。
+- 原项目许可证：**GNU Affero General Public License v3.0 (AGPL-3.0)**
 
 依据 AGPL-3.0 的要求：
 
