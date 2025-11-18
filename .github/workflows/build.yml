@@ -161,9 +161,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: release/*
-          name: Release ${{ steps.version.outputs.version }}
+          name: mylist ${{ steps.version.outputs.version }}
           body: |
-            ## Release ${{ steps.version.outputs.version }}
+            ## mylist ${{ steps.version.outputs.version }}
             
             ### 下载
             请根据您的系统选择对应的二进制文件：
@@ -173,7 +173,7 @@ jobs:
             - macOS AMD64: `mylist-darwin-amd64`
             - macOS ARM64: `mylist-darwin-arm64`
             
-            ### 校验和
+            ### 校验
             请使用 `checksums.txt` 文件验证下载的文件完整性。
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
