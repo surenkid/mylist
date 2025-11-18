@@ -2,32 +2,30 @@
 
 ## Setup your machine
 
-`alist` is written in [Go](https://golang.org/) and [React](https://reactjs.org/).
+`mylist` is written in [Go](https://golang.org/).
 
 Prerequisites:
 
 - [git](https://git-scm.com)
-- [Go 1.20+](https://golang.org/doc/install)
+- [Go 1.22+](https://golang.org/doc/install)
 - [gcc](https://gcc.gnu.org/)
-- [nodejs](https://nodejs.org/)
 
-Clone `alist` and `alist-web` anywhere:
+Clone `mylist`:
 
 ```shell
-$ git clone https://github.com/alist-org/alist.git
-$ git clone --recurse-submodules https://github.com/alist-org/alist-web.git
+$ git clone https://github.com/surenkid/mylist.git
 ```
 You should switch to the `main` branch for development.
 
 ## Preview your change
-### backend
+
+### Backend
+
 ```shell
 $ go run main.go
 ```
-### frontend
-```shell
-$ pnpm dev
-```
+
+Note: The frontend resources are embedded in the binary. To update the frontend, download the dist files to `public/dist` directory or modify the build script to fetch them automatically.
 
 ## Add a new driver
 Copy `drivers/template` folder and rename it, and follow the comments in it.
@@ -103,5 +101,5 @@ The rest of the commit message is then used for this.
 
 ## Submit a pull request
 
-Push your branch to your `alist` fork and open a pull request against the
+Push your branch to your `mylist` fork and open a pull request against the
 `main` branch.
