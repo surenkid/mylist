@@ -1,0 +1,159 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., v1.0.0)'
+        required: false
+        type: string
+      web_version:
+        description: 'Web version number'
+        required: false
+        type: string
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            output: mylist-linux-amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            output: mylist-linux-arm64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            output: mylist-windows-amd64.exe
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            output: mylist-darwin-amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            output: mylist-darwin-arm64
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Checkout frontend (if needed)
+        # 如果前端资源在单独的仓库，可以在这里 checkout
+        # 或者如果前端资源已经包含在仓库中，可以跳过此步骤
+        if: false
+        run: |
+          # 示例：从其他仓库获取前端资源
+          # git clone --depth=1 https://github.com/your-org/mylist-web.git temp-web
+          # cp -r temp-web/dist public/
+          # rm -rf temp-web
+          echo "前端资源应该已经在 public/dist 目录中"
+
+      - name: Verify frontend exists
+        run: |
+          if [ ! -d "public/dist" ] || [ -z "$(ls -A public/dist 2>/dev/null)" ]; then
+            echo "警告: public/dist 目录不存在或为空"
+            echo "请确保前端资源已准备好"
+            exit 1
+          else
+            echo "前端资源已存在"
+          fi
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.ref }}" ]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          WEB_VERSION: ${{ inputs.web_version || 'local' }}
+        shell: bash
+        run: |
+          chmod +x build.sh || true
+          bash build.sh release ${{ matrix.goos }} ${{ matrix.goarch }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: dist/${{ matrix.output }}
+          retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Prepare release files
+        shell: bash
+        run: |
+          mkdir -p release
+          # 将所有构建产物复制到 release 目录
+          find artifacts -type f -name "mylist-*" -exec cp {} release/ \;
+          cd release
+          # 创建校验和文件
+          sha256sum mylist-* > checksums.txt 2>/dev/null || shasum -a 256 mylist-* > checksums.txt
+          cat checksums.txt
+          ls -lh
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## Release ${{ steps.version.outputs.version }}
+            
+            ### 下载
+            请根据您的系统选择对应的二进制文件：
+            - Linux AMD64: `mylist-linux-amd64`
+            - Linux ARM64: `mylist-linux-arm64`
+            - Windows AMD64: `mylist-windows-amd64.exe`
+            - macOS AMD64: `mylist-darwin-amd64`
+            - macOS ARM64: `mylist-darwin-arm64`
+            
+            ### 校验和
+            请使用 `checksums.txt` 文件验证下载的文件完整性。
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
