@@ -1,11 +1,11 @@
 #!/bin/bash
 
-chown -R ${PUID}:${PGID} /opt/alist/
+chown -R ${PUID}:${PGID} /opt/mylist/
 
 umask ${UMASK}
 
 if [ "$1" = "version" ]; then
-  ./alist version
+  ./mylist version
 else
-  exec su-exec ${PUID}:${PGID} ./alist server --no-prefix
+  exec su-exec ${PUID}:${PGID} ./mylist server --no-prefix
 fi

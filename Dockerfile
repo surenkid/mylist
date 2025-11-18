@@ -10,9 +10,9 @@ RUN bash build.sh release docker
 FROM alpine:edge
 
 ARG INSTALL_FFMPEG=false
-LABEL MAINTAINER="i@nn.ci"
+LABEL MAINTAINER="surenkid"
 
-WORKDIR /opt/alist/
+WORKDIR /opt/mylist/
 
 RUN apk update && \
     apk upgrade --no-cache && \
@@ -20,11 +20,11 @@ RUN apk update && \
     [ "$INSTALL_FFMPEG" = "true" ] && apk add --no-cache ffmpeg; \
     rm -rf /var/cache/apk/*
 
-COPY --from=builder /app/bin/alist ./
+COPY --from=builder /app/bin/mylist ./
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && /entrypoint.sh version
 
 ENV PUID=0 PGID=0 UMASK=022
-VOLUME /opt/alist/data/
+VOLUME /opt/mylist/data/
 EXPOSE 5244 5245
 CMD [ "/entrypoint.sh" ]

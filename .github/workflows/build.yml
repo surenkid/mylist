@@ -122,6 +122,61 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  docker:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch frontend
+        shell: bash
+        run: |
+          WEB_VERSION="3.39.2"
+          echo "下载前端资源版本: $WEB_VERSION"
+          curl -L "https://github.com/AlistGo/alist-web/releases/download/$WEB_VERSION/dist.tar.gz" -o dist.tar.gz
+          tar -zxvf dist.tar.gz
+          rm -rf public/dist
+          mv -f dist public
+          rm -rf dist.tar.gz
+          echo "前端资源已下载并放置到 public/dist"
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "image_tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "image_tag_latest=latest" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mylist:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/mylist:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            INSTALL_FFMPEG=false
+
   release:
     needs: build
     runs-on: ubuntu-latest
